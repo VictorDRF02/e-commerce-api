@@ -4,11 +4,25 @@ export class UserService {
   }
 
   /**
+   * Remove sensitive fields from a user record.
+   * @param {object|null} user - User record.
+   * @returns {object|null} Sanitized user or null.
+   */
+  sanitize(user) {
+    if (!user) {
+      return null;
+    }
+
+    const { password, ...safeUser } = user;
+    return safeUser;
+  }
+
+  /**
    * Return all users.
    * @returns {Array<object>} User collection.
    */
   all() {
-    return this.dbService.users;
+    return this.dbService.users.map((user) => this.sanitize(user));
   }
 
   /**
@@ -17,7 +31,7 @@ export class UserService {
    * @returns {object|null} Matching user or null.
    */
   getById(id) {
-    return this.dbService.findUserById(id);
+    return this.sanitize(this.dbService.findUserById(id));
   }
 
   /**
