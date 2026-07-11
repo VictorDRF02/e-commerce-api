@@ -2,8 +2,9 @@ import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 
 export class DbService {
-  constructor(dataFile) {
+  constructor(dataFile, seedFile = dataFile) {
     this.dataFile = dataFile;
+    this.seedFile = seedFile;
     this.db = {
       users: [],
       products: [],
@@ -120,6 +121,11 @@ export class DbService {
    */
   async load() {
     if (!existsSync(this.dataFile)) {
+      if (this.seedFile !== this.dataFile && existsSync(this.seedFile)) {
+        const raw = await readFile(this.seedFile, 'utf-8');
+        return JSON.parse(raw);
+      }
+
       return { users: [], products: [] };
     }
 

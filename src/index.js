@@ -13,14 +13,15 @@ import { createAuthMiddleware } from './middlewares/auth.middleware.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const rootDir = resolve(__dirname, '..');
-const dataFile = resolve(rootDir, 'data/db.json');
-const uploadsDir = resolve(rootDir, 'public/uploads');
+const seedDataFile = resolve(rootDir, 'data/db.json');
+const dataFile = process.env.VERCEL ? resolve('/tmp', 'db.json') : seedDataFile;
+const uploadsDir = process.env.VERCEL ? resolve('/tmp', 'uploads') : resolve(rootDir, 'public/uploads');
 const port = Number(process.env.PORT ?? 3000);
 const apiPrefix = '/api';
 const jwtSecret = process.env.JWT_SECRET ?? 'e-commerce-secret';
 
 const app = express();
-const dbService = new DbService(dataFile);
+const dbService = new DbService(dataFile, seedDataFile);
 await dbService.init();
 const userService = new UserService(dbService);
 const authService = new AuthService(userService, jwtSecret);
