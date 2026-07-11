@@ -12,6 +12,7 @@ export class DbService {
 
   async init() {
     this.db = await this.load();
+    this.db.users = this.withEnvUser(this.db.users);
     return this.db;
   }
 
@@ -124,6 +125,44 @@ export class DbService {
 
     const raw = await readFile(this.dataFile, 'utf-8');
     return JSON.parse(raw);
+  }
+
+  /**
+   * Add a user from environment variables when credentials are configured.
+   * @param {Array<object>} users - Current user collection.
+   * @returns {Array<object>} User collection with the env user, if configured.
+   */
+  withEnvUser(users) {
+    const username = process.env.AUTH_USERNAME?.trim();
+    const password = process.env.AUTH_PASSWORD?.trim();
+
+    if (!username || !password) {
+      return users;
+    }
+
+    const envUser = {
+      id: Number(process.env.AUTH_USER_ID ?? this.nextUserId(users)),
+      username,
+      password,
+      email: process.env.AUTH_EMAIL?.trim(),
+      name: process.env.AUTH_NAME?.trim(),
+      phone: process.env.AUTH_PHONE?.trim(),
+    };
+
+    return [
+      ...users.filter((user) => user.username !== username),
+      envUser,
+    ];
+  }
+
+  /**
+   * Compute the next user id.
+   * @param {Array<object>} users - Current user collection.
+   * @returns {number} Next id value.
+   */
+  nextUserId(users = this.users) {
+    const maxId = users.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0);
+    return Math.max(1, maxId) + 1;
   }
 
   /**
