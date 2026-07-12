@@ -1,4 +1,4 @@
-# E-commerce API
+# e-commerce API
 
 A simple and practical **Express.js REST API** for e-commerce projects, with:
 
@@ -10,7 +10,7 @@ A simple and practical **Express.js REST API** for e-commerce projects, with:
 
 ## Live Demo
 
-- **Production URL:** https://e-commerce-api-eight-umber.vercel.app/
+- **Production URL:** https://lulaxpressapi.vercel.app/
 
 ---
 
