@@ -74,14 +74,6 @@ SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
 SUPABASE_STORAGE_BUCKET=uploads
 SUPABASE_USERS_TABLE=users
 SUPABASE_PRODUCTS_TABLE=products
-
-# Optional fallback login user (works even if users table is empty)
-AUTH_USERNAME=
-AUTH_PASSWORD=
-AUTH_USER_ID=1
-AUTH_EMAIL=
-AUTH_NAME=
-AUTH_PHONE=
 ```
 
 ### Notes
@@ -174,7 +166,7 @@ Protected endpoints:
 
 ## Endpoints
 
-## 1) Health
+## Health
 
 ### GET `/api/health`
 
@@ -188,7 +180,7 @@ Protected endpoints:
 
 ---
 
-## 2) Users
+## Users
 
 ### GET `/api/users`
 
@@ -208,7 +200,7 @@ Returns one user by numeric ID.
 
 ---
 
-## 3) Products
+## Products
 
 ### GET `/api/products`
 
@@ -260,7 +252,7 @@ Deletes a product by ID.
 
 ---
 
-## 4) Uploads
+## Uploads
 
 ### POST `/api/uploads` (Protected)
 
@@ -369,22 +361,5 @@ curl -X POST http://localhost:3000/api/uploads \
 From `package.json`:
 
 - `npm start` → `node --env-file=.env src/index.js`
-- `npm run dev` → `node --watch src/index.js`
 
 ---
-
-## Security Recommendations
-
-- Use a strong `JWT_SECRET` in production.
-- Rotate and protect `SUPABASE_SERVICE_ROLE_KEY`.
-- Restrict CORS origins in production (instead of allowing all).
-- Validate and sanitize all user input.
-- Consider rate limiting for auth and upload endpoints.
-
----
-
-## License
-
-No license file is currently defined in this repository.
-
-If you want, add a `LICENSE` file (for example: MIT).
