@@ -5,27 +5,27 @@ export class ProductService {
 
   /**
    * Return all products.
-   * @returns {Array<object>} Product collection.
+    * @returns {Promise<Array<object>>} Product collection.
    */
-  all() {
-    return this.dbService.products;
+  async all() {
+    return this.dbService.listProducts();
   }
 
   /**
    * Get a product by id.
    * @param {number} id - Product id.
-   * @returns {object|null} Matching product or null.
+    * @returns {Promise<object|null>} Matching product or null.
    */
-  getById(id) {
+  async getById(id) {
     return this.dbService.findProductById(id);
   }
 
   /**
    * Create a product.
    * @param {object} product - Raw product payload.
-   * @returns {object} Stored product.
+    * @returns {Promise<object>} Stored product.
    */
-  create(product) {
+  async create(product) {
     return this.dbService.createProduct(product);
   }
 
@@ -33,18 +33,18 @@ export class ProductService {
    * Update a product by id.
    * @param {number} id - Product id.
    * @param {object} product - Partial product payload.
-   * @returns {object|null} Updated product or null.
+    * @returns {Promise<object|null>} Updated product or null.
    */
-  update(id, product) {
+  async update(id, product) {
     return this.dbService.updateProduct(id, product);
   }
 
   /**
    * Delete a product by id.
    * @param {number} id - Product id.
-   * @returns {object|null} Deleted product or null.
+   * @returns {Promise<object|null>} Deleted product or null.
    */
-  delete(id) {
+  async delete(id) {
     return this.dbService.deleteProduct(id);
   }
 }

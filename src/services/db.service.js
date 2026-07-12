@@ -1,188 +1,243 @@
-import { existsSync } from 'node:fs';
-import { readFile, writeFile } from 'node:fs/promises';
+import { createClient } from '@supabase/supabase-js';
 
 export class DbService {
-  constructor(dataFile) {
-    this.dataFile = dataFile;
-    this.db = {
-      users: [],
-      products: [],
-    };
+  constructor() {
+    this.supabaseUrl = process.env.SUPABASE_URL;
+    this.supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    this.productsTable = process.env.SUPABASE_PRODUCTS_TABLE ?? 'products';
+    this.usersTable = process.env.SUPABASE_USERS_TABLE ?? 'users';
+    this.storageBucket = process.env.SUPABASE_STORAGE_BUCKET ?? 'uploads';
+    this.supabase = null;
   }
 
+  /**
+   * Initialize the Supabase client with service role credentials.
+   * @returns {Promise<void>} Resolves when the client is ready.
+   */
   async init() {
-    this.db = await this.load();
-    this.db.users = this.withEnvUser(this.db.users);
-    return this.db;
+    if (!this.supabaseUrl || !this.supabaseServiceRoleKey) {
+      throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables');
+    }
+
+    this.supabase = createClient(this.supabaseUrl, this.supabaseServiceRoleKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
   }
 
   /**
-   * Get the in-memory list of users.
-   * @returns {Array<object>} User collection.
+   * Fetch all users and append the optional fallback env user.
+   * @returns {Promise<Array<object>>} User collection.
    */
-  get users() {
-    return this.db.users;
-  }
+  async listUsers() {
+    const { data, error } = await this.supabase
+      .from(this.usersTable)
+      .select('*')
+      .order('id', { ascending: true });
 
-  /**
-   * Get the in-memory list of products.
-   * @returns {Array<object>} Product collection.
-   */
-  get products() {
-    return this.db.products;
+    if (error) {
+      throw new Error(`Failed to list users: ${error.message}`);
+    }
+
+    return data ?? [];
   }
 
   /**
    * Find a user by username and password.
    * @param {string} username - User username.
    * @param {string} password - User password.
-   * @returns {object|null} Matching user or null.
+   * @returns {Promise<object|null>} Matching user or null.
    */
-  findUserByCredentials(username, password) {
-    return this.users.find((item) => item.username === username && item.password === password) ?? null;
+  async findUserByCredentials(username, password) {
+    const { data, error } = await this.supabase
+      .from(this.usersTable)
+      .select('*')
+      .eq('username', username)
+      .eq('password', password)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`Failed to find user by credentials: ${error.message}`);
+    }
+
+    if (data) {
+      return data;
+    }
+
+    return null;
   }
 
   /**
    * Find a user by id.
    * @param {number} id - User id.
-   * @returns {object|null} Matching user or null.
+   * @returns {Promise<object|null>} Matching user or null.
    */
-  findUserById(id) {
-    return this.users.find((item) => item.id === id) ?? null;
+  async findUserById(id) {
+    const { data, error } = await this.supabase
+      .from(this.usersTable)
+      .select('*')
+      .eq('id', id)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`Failed to find user by id: ${error.message}`);
+    }
+
+    if (data) {
+      return data;
+    }
+  
+    return null;
+  }
+
+  /**
+   * Fetch all products sorted by id.
+   * @returns {Promise<Array<object>>} Product collection.
+   */
+  async listProducts() {
+    const { data, error } = await this.supabase
+      .from(this.productsTable)
+      .select('*')
+      .order('id', { ascending: true });
+
+    if (error) {
+      throw new Error(`Failed to list products: ${error.message}`);
+    }
+
+    return data ?? [];
   }
 
   /**
    * Find a product by id.
    * @param {number} id - Product id.
-   * @returns {object|null} Matching product or null.
+   * @returns {Promise<object|null>} Matching product or null.
    */
-  findProductById(id) {
-    return this.products.find((item) => item.id === id) ?? null;
+  async findProductById(id) {
+    const { data, error } = await this.supabase
+      .from(this.productsTable)
+      .select('*')
+      .eq('id', id)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`Failed to find product by id: ${error.message}`);
+    }
+
+    return data ?? null;
   }
 
   /**
-   * Create and store a normalized product.
+   * Create a product row in Supabase.
    * @param {object} product - Raw product payload.
-   * @returns {object} Stored product.
+   * @returns {Promise<object>} Stored product.
    */
-  createProduct(product) {
-    const nextId = this.nextProductId();
-    const normalizedProduct = this.normalizeProduct({ ...product, id: nextId }, nextId);
-    this.products.push(normalizedProduct);
-    return normalizedProduct;
+  async createProduct(product) {
+    const normalizedProduct = this.normalizeProduct(product);
+    const { data, error } = await this.supabase
+      .from(this.productsTable)
+      .insert(normalizedProduct)
+      .select('*')
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to create product: ${error.message}`);
+    }
+
+    return data;
   }
 
   /**
    * Update a product by id.
    * @param {number} id - Product id.
    * @param {object} product - Partial product payload.
-   * @returns {object|null} Updated product or null.
+   * @returns {Promise<object|null>} Updated product or null when not found.
    */
-  updateProduct(id, product) {
-    const index = this.products.findIndex((item) => item.id === id);
-
-    if (index < 0) {
+  async updateProduct(id, product) {
+    const currentProduct = await this.findProductById(id);
+    if (!currentProduct) {
       return null;
     }
 
-    const updatedProduct = this.normalizeProduct({ ...this.products[index], ...product, id }, id);
-    this.products[index] = updatedProduct;
-    return updatedProduct;
+    const normalizedProduct = this.normalizeProduct({ ...currentProduct, ...product, id });
+    delete normalizedProduct.id;
+
+    const { data, error } = await this.supabase
+      .from(this.productsTable)
+      .update(normalizedProduct)
+      .eq('id', id)
+      .select('*')
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`Failed to update product: ${error.message}`);
+    }
+
+    return data ?? null;
   }
 
   /**
    * Delete a product by id.
    * @param {number} id - Product id.
-   * @returns {object|null} Deleted product or null.
+   * @returns {Promise<object|null>} Deleted product or null when not found.
    */
-  deleteProduct(id) {
-    const index = this.products.findIndex((item) => item.id === id);
+  async deleteProduct(id) {
+    const { data, error } = await this.supabase
+      .from(this.productsTable)
+      .delete()
+      .eq('id', id)
+      .select('*')
+      .maybeSingle();
 
-    if (index < 0) {
-      return null;
+    if (error) {
+      throw new Error(`Failed to delete product: ${error.message}`);
     }
 
-    const [deletedProduct] = this.products.splice(index, 1);
-    return deletedProduct;
+    return data ?? null;
   }
 
   /**
-   * Persist the current database state to disk.
-   * @returns {Promise<void>}
+   * Upload an image to Supabase Storage and return its public URL.
+   * @param {object} params - Upload payload.
+   * @param {Buffer} params.fileBuffer - File bytes in memory.
+   * @param {string} params.contentType - MIME type.
+   * @param {string} params.extension - File extension including dot.
+   * @returns {Promise<{filename: string, url: string}>} Uploaded object metadata.
    */
-  async save() {
-    await writeFile(this.dataFile, `${JSON.stringify(this.db, null, 2)}\n`, 'utf-8');
-  }
+  async uploadImage({ fileBuffer, contentType, extension }) {
+    const safeExtension = extension ? extension.toLowerCase() : '';
+    const objectName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExtension}`;
 
-  /**
-   * Load the database state from disk.
-   * @returns {Promise<object>} Database state.
-   */
-  async load() {
-    if (!existsSync(this.dataFile)) {
-      return { users: [], products: [] };
+    const { error: uploadError } = await this.supabase.storage
+      .from(this.storageBucket)
+      .upload(objectName, fileBuffer, {
+        contentType,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      throw new Error(`Failed to upload image: ${uploadError.message}`);
     }
 
-    const raw = await readFile(this.dataFile, 'utf-8');
-    return JSON.parse(raw);
-  }
-
-  /**
-   * Add a user from environment variables when credentials are configured.
-   * @param {Array<object>} users - Current user collection.
-   * @returns {Array<object>} User collection with the env user, if configured.
-   */
-  withEnvUser(users) {
-    const username = process.env.AUTH_USERNAME?.trim();
-    const password = process.env.AUTH_PASSWORD?.trim();
-
-    if (!username || !password) {
-      return users;
-    }
-
-    const envUser = {
-      id: Number(process.env.AUTH_USER_ID ?? this.nextUserId(users)),
-      username,
-      password,
-      email: process.env.AUTH_EMAIL?.trim(),
-      name: process.env.AUTH_NAME?.trim(),
-      phone: process.env.AUTH_PHONE?.trim(),
+    const { data } = this.supabase.storage.from(this.storageBucket).getPublicUrl(objectName);
+    return {
+      filename: objectName,
+      url: data.publicUrl,
     };
-
-    return [
-      ...users.filter((user) => user.username !== username),
-      envUser,
-    ];
   }
 
   /**
-   * Compute the next user id.
-   * @param {Array<object>} users - Current user collection.
-   * @returns {number} Next id value.
-   */
-  nextUserId(users = this.users) {
-    const maxId = users.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0);
-    return Math.max(1, maxId) + 1;
-  }
-
-  /**
-   * Compute the next product id.
-   * @returns {number} Next id value.
-   */
-  nextProductId() {
-    const maxId = this.products.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0);
-    return Math.max(1, maxId) + 1;
-  }
-
-  /**
-   * Normalize a product payload into the stored shape.
+   * Normalize product payload into the persisted shape.
    * @param {object} product - Raw product payload.
-   * @param {number} fallbackId - Id to use when the payload does not include one.
    * @returns {object} Normalized product.
    */
-  normalizeProduct(product, fallbackId) {
+  normalizeProduct(product) {
     return {
-      id: Number(product.id ?? fallbackId),
+      ...(product.id ? { id: Number(product.id) } : {}),
       title: String(product.title ?? '').trim(),
       price: Number(product.price ?? 0),
       description: String(product.description ?? '').trim(),
@@ -193,8 +248,8 @@ export class DbService {
             rate: Number(product.rating.rate ?? 0),
             count: Number(product.rating.count ?? 0),
           }
-        : undefined,
-      quantity: product.quantity ? Number(product.quantity) : undefined,
+        : null,
+      quantity: product.quantity !== undefined ? Number(product.quantity) : null,
     };
   }
 }

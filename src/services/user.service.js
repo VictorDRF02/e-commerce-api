@@ -19,28 +19,30 @@ export class UserService {
 
   /**
    * Return all users.
-   * @returns {Array<object>} User collection.
+    * @returns {Promise<Array<object>>} User collection.
    */
-  all() {
-    return this.dbService.users.map((user) => this.sanitize(user));
+  async all() {
+    const users = await this.dbService.listUsers();
+    return users.map((user) => this.sanitize(user));
   }
 
   /**
    * Get a user by id.
    * @param {number} id - User id.
-   * @returns {object|null} Matching user or null.
+    * @returns {Promise<object|null>} Matching user or null.
    */
-  getById(id) {
-    return this.sanitize(this.dbService.findUserById(id));
+  async getById(id) {
+    const user = await this.dbService.findUserById(id);
+    return this.sanitize(user);
   }
 
   /**
    * Get a user by username and password.
    * @param {string} username - User username.
    * @param {string} password - User password.
-   * @returns {object|null} Matching user or null.
+    * @returns {Promise<object|null>} Matching user or null.
    */
-  getByCredentials(username, password) {
+  async getByCredentials(username, password) {
     return this.dbService.findUserByCredentials(username, password);
   }
 }

@@ -10,10 +10,10 @@ export class AuthService {
    * Authenticate a user and issue a JWT.
    * @param {string} username - User username.
    * @param {string} password - User password.
-   * @returns {{token: string}|null} Login response or null.
+    * @returns {Promise<{token: string}|null>} Login response or null.
    */
-  login(username, password) {
-    const user = this.userService.getByCredentials(username, password);
+  async login(username, password) {
+    const user = await this.userService.getByCredentials(username, password);
 
     if (!user) {
       return null;
