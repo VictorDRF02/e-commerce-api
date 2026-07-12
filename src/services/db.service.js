@@ -242,14 +242,7 @@ export class DbService {
       price: Number(product.price ?? 0),
       description: String(product.description ?? '').trim(),
       category: String(product.category ?? '').trim(),
-      image: String(product.image ?? 'placeholder.png').trim(),
-      rating: product.rating
-        ? {
-            rate: Number(product.rating.rate ?? 0),
-            count: Number(product.rating.count ?? 0),
-          }
-        : null,
-      quantity: product.quantity !== undefined ? Number(product.quantity) : null,
+      image: String(product.image ?? 'placeholder.png').trim()
     };
   }
 }
