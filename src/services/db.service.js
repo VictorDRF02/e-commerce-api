@@ -231,6 +231,20 @@ export class DbService {
   }
 
   /**
+   * Return the public URL for a stored image by filename.
+   * @param {string} filename - Storage object filename.
+   * @returns {string} Public URL of the stored image.
+   */
+  getImageUrl(filename) {
+    if (!filename || typeof filename !== 'string' || !filename.trim()) {
+      throw new Error('filename is required');
+    }
+
+    const { data } = this.supabase.storage.from(this.storageBucket).getPublicUrl(filename.trim());
+    return data.publicUrl;
+  }
+
+  /**
    * Normalize product payload into the persisted shape.
    * @param {object} product - Raw product payload.
    * @returns {object} Normalized product.

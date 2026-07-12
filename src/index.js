@@ -87,6 +87,17 @@ app.get(`${apiPrefix}/products`, asyncHandler(async (req, res) => {
   return res.json(await productService.all());
 }));
 
+app.get(`${apiPrefix}/uploads/:filename`, asyncHandler(async (req, res) => {
+  const { filename } = req.params;
+
+  if (!filename || !/^[\w.\-]+$/.test(filename)) {
+    return res.status(400).json({ message: 'Invalid or missing filename' });
+  }
+
+  const url = dbService.getImageUrl(filename);
+  return res.redirect(302, url);
+}));
+
 app.post(`${apiPrefix}/uploads`, authMiddleware, (req, res) => {
   upload.single('file')(req, res, async (error) => {
     if (error) {
