@@ -10,7 +10,7 @@ A simple and practical **Express.js REST API** for e-commerce projects, with:
 
 ## Live Demo
 
-- **Production URL:** https://e-commerce-api-theta-self.vercel.app
+- **Production URL:** https://e-commerce-api-eight-umber.vercel.app/
 
 ---
 
