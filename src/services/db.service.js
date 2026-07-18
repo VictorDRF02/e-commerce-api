@@ -95,14 +95,15 @@ export class DbService {
   }
 
   /**
-   * Fetch all products sorted by id.
+   * Fetch all products sorted by most recent update first.
    * @returns {Promise<Array<object>>} Product collection.
    */
   async listProducts() {
     const { data, error } = await this.supabase
       .from(this.productsTable)
       .select('*')
-      .order('id', { ascending: true });
+      .order('updated_at', { ascending: false })
+      .order('id', { ascending: false });
 
     if (error) {
       throw new Error(`Failed to list products: ${error.message}`);
